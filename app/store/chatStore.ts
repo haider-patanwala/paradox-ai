@@ -27,6 +27,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sendMessage: async (content: string) => {
     set({ isLoading: true })
     try {
+      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        setTimeout(() => {
+          set((state) => ({
+            messages: [...state.messages, { 
+              role: 'assistant', 
+              content: "I apologize, but I can't process your request at the moment as the API key is not configured. Please contact the administrator." 
+            }]
+          }))
+        }, 1000) // Simulate API delay
+        return
+      }
+      
       const result = await model.generateContent(content)
       const response = await result.response
       const text = response.text()
@@ -34,7 +46,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         messages: [...state.messages, { role: 'assistant', content: text }]
       }))
     } catch (error) {
-      console.error('Error:', error)
+      set((state) => ({
+        messages: [...state.messages, { 
+          role: 'assistant', 
+          content: "I apologize, but I encountered an error processing your request. Please try again later." 
+        }]
+      }))
     } finally {
       set({ isLoading: false })
     }
