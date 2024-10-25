@@ -1,51 +1,4 @@
-// "use client"
 
-// import React, { useState, useRef, useEffect } from "react"
-// import { useStore } from "zustand"
-// import { createStore } from "zustand/vanilla"
-// import { Button } from "@/components/ui/button"
-// import { Input } from "@/components/ui/input"
-// import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-// import { ScrollArea } from "@/components/ui/scroll-area"
-// import { FileUp, Send } from "lucide-react"
-// import { useUploadStore } from '../store/uploadStore'
-// import { useChatStore } from '../store/chatStore'
-// import { Check, Loader2 } from 'lucide-react'
-// import { isValidUrl } from "../utils/validation"
-
-// interface Message {
-//   role: "user" | "assistant"
-//   content: string
-// }
-
-// interface ChatStore {
-//   messages: Message[]
-//   suggestions: string[]
-//   isLoading: boolean
-//   addMessage: (message: Message) => void
-//   sendMessage: (content: string) => Promise<void>
-// }
-
-// const createChatStore = () => createStore<ChatStore>((set) => ({
-//   messages: [{ role: "assistant", content: "Hello! How can I assist you today?" }],
-//   suggestions: ['@doc', '@yt', '@img', '@url'],
-//   isLoading: false,
-//   addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
-//   sendMessage: async (content: string) => {
-//     set({ isLoading: true })
-//     try {
-//       // Here you would typically send the message to your AI backend
-//       // and then add the AI's response to the messages
-//     } catch (error) {
-//       console.error('Error:', error)
-//     } finally {
-//       set({ isLoading: false })
-//     }
-//   }
-// }))
-
-// const chatStore = createChatStore()
 
 "use client"
 
@@ -57,10 +10,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileUp, Send, X, Check, Loader2 } from "lucide-react"
 import { useUploadStore } from '../store/uploadStore'
-import { useChatStore } from '../store/chatStore'
+import { useChatStore, useModal } from '../store/chatStore'
 import { ChatMessage } from "@/components/chat/ChatMessage"
 import { FileUploadItem } from "@/components/upload/FileUploadItem"
 import { isValidUrl } from "../utils/validation"
+import ModalVid from "@/components/modalVid"
 
 const AIAssistant: React.FC = () => {
   const [input, setInput] = useState("")
@@ -115,6 +69,8 @@ const AIAssistant: React.FC = () => {
       }
     }
   }
+
+  const { onOpen } = useModal()
 
   return (
     <div className="container mx-auto p-4">
@@ -256,8 +212,10 @@ const AIAssistant: React.FC = () => {
               </Button>
             </div>
           </CardFooter>
+          <Button onClick={()=>onOpen()}>Open Modal</Button>
         </Card>
       </div>
+      <ModalVid/>
     </div>
   )
 }
