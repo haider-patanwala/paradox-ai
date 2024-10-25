@@ -6,6 +6,19 @@ interface Message {
   content: string
 }
 
+interface ModalStore {
+    isOpen: boolean
+    onOpen: () => void
+    onClose: () => void
+}
+
+export const useModal = create<ModalStore>((set, get) => ({
+    isOpen: false,
+    onOpen: () => set({ isOpen: true }),
+    onClose: () => set({ isOpen: false }),
+}))
+
+
 interface ChatStore {
   messages: Message[]
   suggestions: string[]
