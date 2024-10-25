@@ -1,28 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pinecone } from "@pinecone-database/pinecone";
-import { pipeline } from '@xenova/transformers';
-import { PCA } from 'ml-pca';
+import { Pinecone } from '@pinecone-database/pinecone';
+import OpenAI from "openai";
 
-// Initialize Pinecone client with API key and environment
 const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY || "",
+    apiKey: process.env.PINECONE_API_KEY!,
 });
-const INDEX_NAME = "paradox";
+const maxArraySize = 1024; // The total size of the array
+const sentencesArray = new Array(maxArraySize).fill(''); // Initialize the array with empty strings
 
-async function loadModel() {
-    const model = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    return model;
-  }
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
   
-  async function getEmbeddings(sentences:string) {
-    const model = await loadModel();
-    const embeddings = await model(sentences);
-    return embeddings;
-  }
+
+// Function to add a sentence to the array
+function addSentenceToArray(newSentence: string) {
+    // Clear the existing sentences array
+    for (let i = 0; i < maxArraySize; i++) {
+        sentencesArray[i] = ''; // Reset to empty strings
+    }
+
+    let startIndex = 0;
+    let arrayIndex = 0; // To keep track of the current index in sentencesArray
+
+    // Loop until the entire sentence has been processed or we fill the array
+    while (startIndex < newSentence.length && arrayIndex < maxArraySize) {
+        // Extract a substring of up to 1024 characters
+        const substring = newSentence.substring(startIndex, startIndex + maxArraySize);
+
+        // Add the substring to the array
+        sentencesArray[arrayIndex] = substring;
+        console.log("Substring added successfully:", substring);
+
+        // Update the start index and the array index for the next iteration
+        startIndex += maxArraySize;
+        arrayIndex++;
+    }
+
+    // If there are remaining positions not filled in the array, they will stay as empty strings.
+    return sentencesArray; // Return the updated array
+}
+
+
+
+async function query(data:any) {
+	const response = await fetch(
+		"https://api-inference.huggingface.co/models/thenlper/gte-large",
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.HF_API_KEY}`,
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+			body: JSON.stringify(data),
+		}
+	);
+	const result = await response.json();
+	return result;
+}
+
+
+
+
+async function insertToPinecone(embeddings: Float32Array, indexName: string) {
+    const index = pinecone.Index(indexName); // Replace with your index name
+
+    // Prepare the data for Pinecone
+    const vector = {
+        id: `unique_id-${Date.now()}`, // Provide a unique ID for this embedding
+        values: Array.from(embeddings), // Convert to a regular array if needed
+        metadata: { // Add any metadata you want to associate with the embedding
+            // Example: category: 'cars', description: 'A detailed description of cars'
+        },
+    };
+
+    // Upsert the vector
+    await index.upsert([{ ...vector }]); // Wrap the vector in an array
+}
+
 export const POST = async (req: NextRequest) => {
     try {
-        // Parse the incoming JSON request body
-        const text = "Cars are integral to modern life, offering convenience, performance, and a blend of personal style. When discussing a car, several key attributes come to mind: brand, color, body type, and features. Each of these aspects plays a role in a car’s appeal, functionality, and the overall driving experience. in my home Additionally, the features of a car have become increasingly important in recent years, with advancements in technology offering everything from advanced safety systems to infotainment. Safety features, such as lane-keeping assistance, automatic emergency braking, and adaptive cruise control, are now commonplace in newer models. Infotainment systems with touch screens, smartphone connectivity, and voice control make for a more enjoyable and convenient driving experience. High-end models offer luxurious extras like leather interiors, heated seats, and premium sound systems, adding to comfort and aesthetic appeal. Electric and hybrid options from brands like Tesla and Toyota also reflect growing environmental consciousness among buyers, with features like extended battery life and fast charging capabilities."
+        const text = "Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....Cars are integral to modern life, offering convenience, performance, and a blend of personal style....".repeat(10);
+
+
+// Add the initial sentence
+const sentenceArray = addSentenceToArray(text);
+console.log("the ==--", sentenceArray)
+
         // Validate input text
         if (typeof text !== "string" || text.trim() === "") {
             return NextResponse.json(
@@ -30,31 +94,27 @@ export const POST = async (req: NextRequest) => {
                 { status: 400 }
             );
         }
-
         console.log("Received text:");
 
-        // Generate text embeddings using TensorFlow
-        const embedding:any = await getEmbeddings(text);
-        console.log("Embedding generated:",embedding);
+        const embedding = await query({"inputs": {
+            "source_sentence": text,
+            "sentences": sentenceArray
+        }})
+
+
+        console.log(embedding);
+
+
+        // Generate text embeddings
+        // const embedding: any = await getEmbeddings(text);
+        // console.log("Embedding generated:", embedding);
+
         if (!embedding || embedding.length === 0) {
             throw new Error("Embedding generation failed");
         }
 
-        
-
-        // console.log("Embedding generated:",embedding);
-
-        // // Access the index from Pinecone client
-        // const index = pinecone.Index(INDEX_NAME);
-        // const vector = {
-        //     id: `unique-id-${Date.now()}`, // Generate a unique ID
-        //     values: embedding[0] as number[], // Cast to number[] explicitly
-        // };
-
-        // console.log("Vector:", vector);
-
-        // Use upsert directly on the vector array
-        // await index.upsert([vector]);
+        // Insert the embedding into Pinecone
+        await insertToPinecone(embedding, 'hackathon'); 
 
         return NextResponse.json(
             { message: "Embedding stored successfully" },
