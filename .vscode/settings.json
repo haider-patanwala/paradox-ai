@@ -5,5 +5,8 @@
   "eslint.enable": false,
   "php.suggest.basic": false,
   "php.validate.enable": false,
-  "supermaven.enableFixWithSupermaven": false
+  "supermaven.enableFixWithSupermaven": false,
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  }
 }
