@@ -21,9 +21,17 @@ const AIAssistant: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const [urlLoading, setUrlLoading] = useState(false)
+  const [urlAdded, setUrlAdded] = useState(false)
+  const { setUrlContent } = useChatStore()
 
   const { messages, suggestions, isLoading, addMessage, sendMessage, setPdfContent } = useChatStore()
-  const { uploadedFiles, validUrls, addFile, addUrl, removeFile, removeUrl } = useUploadStore()
+  const { uploadedFiles, addFile, addUrl, removeFile, removeUrl } = useUploadStore()
+
+  const [urlInputs, setUrlInputs] = useState<{ [key: string]: string }>({
+    youtube: '',
+    document: ''
+  })
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -82,18 +90,48 @@ const AIAssistant: React.FC = () => {
     }
   }
 
-  const handleUrlInput = async (e: React.ChangeEvent<HTMLInputElement>, type: 'youtube' | 'document') => {
-    const url = e.target.value
-    if (isValidUrl(url)) {
-       const response = await fetch("/api/youtube",{
-        method: "POST",
-        body: JSON.stringify({
-            videoId: url,
-            isTimeRequired: true
+  const handleUrlInput = (e: React.ChangeEvent<HTMLInputElement>, type: 'youtube' | 'document') => {
+    setUrlInputs(prev => ({
+      ...prev,
+      [type]: e.target.value
+    }))
+  }
+
+  const handleUrlSubmit = async (type: 'youtube' | 'document') => {
+    const url = urlInputs[type]
+    if (!isValidUrl(url)) {
+      toast.error('Please enter a valid URL')
+      return
+    }
+
+    setUrlLoading(true)
+    try {
+      if (type === 'document') {
+        const response = await fetch("/api/linkExtract", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: url }),
         })
-    })
-    const data = await response.json()
-    console.log(data)
+
+        const result = await response.json()
+        
+        if (result.data) {
+          setUrlContent(JSON.stringify(result.data))
+          toast.success("URL content extracted successfully!")
+          setUrlAdded(true)
+          addUrl({
+            url,
+            type: 'document',
+            content: result.data
+          })
+        }
+      }
+    } catch (error) {
+      toast.error('Error extracting URL content')
+    } finally {
+      setUrlLoading(false)
     }
   }
 
@@ -172,23 +210,25 @@ const AIAssistant: React.FC = () => {
 
               <div className="space-y-2">
                 {['youtube', 'document'].map((type) => (
-                  <div key={type} className="relative">
+                  <div key={type} className="relative flex items-center space-x-2">
                     <Input 
-                      placeholder={`${type.charAt(0).toUpperCase() + type.slice(1)} Link`}
+                      placeholder={type === 'document' ? "Enter URL (e.g., https://example.com)" : "YouTube URL"}
+                      value={urlInputs[type as 'youtube' | 'document']}
                       onChange={(e) => handleUrlInput(e, type as 'youtube' | 'document')}
                     />
-                    <AnimatePresence>
-                      {validUrls.some(url => url.type === type) && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="absolute right-2 top-2"
-                        >
-                          <Check className="text-green-500" />
-                        </motion.div>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleUrlSubmit(type as 'youtube' | 'document')}
+                      disabled={urlLoading}
+                    >
+                      {urlLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : urlAdded ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        'Add'
                       )}
-                    </AnimatePresence>
+                    </Button>
                   </div>
                 ))}
               </div>
