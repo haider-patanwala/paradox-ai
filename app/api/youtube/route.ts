@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { YoutubeTranscript } from "youtube-transcript"
+
 export const POST = async (req: NextRequest) => {
   try {
-    const { isTimeRequired, videoId } = await await req.json()
+    const { videoId } = await req.json()
 
     if (!videoId) {
       return NextResponse.json(
-        { message: "videoId are required" },
+        {
+          message: "Video ID is required",
+          success: false
+        },
         { status: 400 }
       )
     }
+
     const getVideoTranscript = async (videoId: string) => {
       try {
         console.log("videoId", videoId)
@@ -22,8 +27,9 @@ export const POST = async (req: NextRequest) => {
         let content = ""
         let wordCount = 0
         const wordLimit = 19999
+
         if (!transcript) {
-          return "data"
+          throw new Error("No transcript available")
         }
 
         for (const segment of transcript) {
@@ -40,20 +46,27 @@ export const POST = async (req: NextRequest) => {
 
         return content.trim()
       } catch (error: any) {
-        return NextResponse.json(
-          { message: "Failed to fetch transcript", error: error.message },
-          { status: 500 }
-        )
+        throw new Error(`Failed to fetch transcript: ${error.message}`)
       }
     }
 
     const data = await getVideoTranscript(videoId)
 
-    return NextResponse.json({ message: "hello world", data }, { status: 200 })
-  } catch (error: any) {
-    console.error("Error in /api/embedding POST handler:", error)
     return NextResponse.json(
-      { message: "Failed to store embedding", error: error.message },
+      {
+        message: "Transcript extracted successfully",
+        data,
+        success: true
+      },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error("Error processing YouTube transcript:", error)
+    return NextResponse.json(
+      {
+        message: error.message || "Failed to process YouTube transcript",
+        success: false
+      },
       { status: 500 }
     )
   }
