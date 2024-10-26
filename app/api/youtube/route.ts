@@ -3,7 +3,7 @@ import { YoutubeTranscript } from "youtube-transcript"
 
 export const POST = async (req: NextRequest) => {
   try {
-    const { videoId } = await req.json()
+    const { videoId, isTimeRequired } = await req.json()
 
     if (!videoId) {
       return NextResponse.json(
@@ -19,9 +19,7 @@ export const POST = async (req: NextRequest) => {
       try {
         console.log("videoId", videoId)
         const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-        console.log("the transcript", transcript)
         if (isTimeRequired) {
-          console.log("the trans", transcript)
           return transcript
         }
         let content = ""
