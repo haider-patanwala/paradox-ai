@@ -1,4 +1,4 @@
-import { useModal } from "@/app/store/chatStore"
+import { useModal } from "@/lib/chatStore"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -7,18 +7,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { i } from "framer-motion/client"
 
 type Props = {}
 
 function modalVid({}: Props) {
-    const { isOpen, onClose ,onOpen} = useModal()
+  const { isOpen, onClose, onOpen } = useModal()
   return (
-       <Dialog open={isOpen} onOpenChange={isOpen?onClose:onOpen}
-       >
+    <Dialog open={isOpen} onOpenChange={isOpen ? onClose : onOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">Edit Profile</Button>
       </DialogTrigger>
@@ -31,7 +29,6 @@ function modalVid({}: Props) {
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-
             <Input
               id="name"
               defaultValue="Pedro Duarte"
@@ -39,7 +36,6 @@ function modalVid({}: Props) {
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-
             <Input
               id="username"
               defaultValue="@peduarte"
