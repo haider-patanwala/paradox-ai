@@ -15,40 +15,27 @@ export const POST = async (req: NextRequest) => {
       )
     }
 
-    const getVideoTranscript = async (videoId: string) => {
-      try {
-        console.log("videoId", videoId)
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-        if (isTimeRequired) {
-          return transcript
-        }
-        let content = ""
-        let wordCount = 0
-        const wordLimit = 19999
-
-        if (!transcript) {
-          throw new Error("No transcript available")
-        }
-
-        for (const segment of transcript) {
-          const words = segment.text.split(/\s+/)
-          if (wordCount + words.length <= wordLimit) {
-            content += segment.text + " "
-            wordCount += words.length
-          } else {
-            const remainingWords = wordLimit - wordCount
-            content += words.slice(0, remainingWords).join(" ") + " "
-            break
-          }
-        }
-
-        return content.trim()
-      } catch (error: any) {
-        throw new Error(`Failed to fetch transcript: ${error.message}`)
-      }
+    const transcript = await YoutubeTranscript.fetchTranscript(videoId)
+    
+    if (!transcript) {
+      throw new Error("No transcript available")
     }
 
-    const data = await getVideoTranscript(videoId)
+    let data;
+    if (isTimeRequired) {
+      // Return full transcript with timestamps
+      data = transcript.map((segment: { text: string; start?: number; duration?: number }) => ({
+        text: segment.text,
+        start: segment.start,
+        duration: segment.duration
+      }))
+    } else {
+      // Return concatenated text only
+      data = transcript
+        .map(segment => segment.text)
+        .join(' ')
+        .slice(0, 19999); // Keep within token limits
+    }
 
     return NextResponse.json(
       {

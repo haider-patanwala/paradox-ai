@@ -45,8 +45,7 @@ const AIAssistant: React.FC = () => {
     isLoading,
     addMessage,
     sendMessage,
-    setPdfContent
-  } = useChatStore()
+    setPdfContent  } = useChatStore()
   const { uploadedFiles, addFile, addUrl, removeFile, removeUrl } =
     useUploadStore()
 
@@ -56,10 +55,8 @@ const AIAssistant: React.FC = () => {
   })
 
   const extractYoutubeId = (url: string): string | null => {
-    const regExp =
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
-    const match = url.match(regExp)
-    return match && match[2].length === 11 ? match[2] : null
+    const result = url.split("watch?v=")[1]
+    return result ? result : null
   }
 
   useEffect(() => {
@@ -102,7 +99,7 @@ const AIAssistant: React.FC = () => {
       }
     } else if (type === "image") {
       const formData = new FormData()
-      formData.append("file", file!)
+      formData.append("file", file)
 
       try {
         const response = await fetch("/api/uploadPdf", {
@@ -145,6 +142,7 @@ const AIAssistant: React.FC = () => {
     try {
       if (type === "youtube") {
         const videoId = extractYoutubeId(url)
+        console.log("the videoId is ====------>>>>>>>>>>>>>>>>>.", videoId)
         if (!videoId) {
           toast.error("Invalid YouTube URL")
           return
@@ -155,13 +153,16 @@ const AIAssistant: React.FC = () => {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ videoId })
+          body: JSON.stringify({ 
+            videoId,
+            isTimeRequired: true  // Add this flag
+          })
         })
 
         const result = await response.json()
 
         if (result.success) {
-          setUrlContent(result.data)
+          useChatStore.getState().setYoutubeContent(result.data)
           toast.success("YouTube transcript extracted successfully!")
           setUrlAdded((prev) => ({ ...prev, [type]: true }))
           addUrl({
@@ -284,73 +285,49 @@ const AIAssistant: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                {["youtube", "document"].map((type) => (
-                  <div
-                    key={type}
-                    className="relative flex items-center space-x-2"
+                {/* YouTube URL Input */}
+                <div className="relative flex items-center space-x-2">
+                  <Input
+                    placeholder="Enter YouTube URL (https://youtube.com/watch?v=...)"
+                    value={urlInputs.youtube}
+                    onChange={(e) => handleUrlInput(e, "youtube")}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => handleUrlSubmit("youtube")}
+                    disabled={urlLoading.youtube}
                   >
-                    <Input
-                      placeholder={
-                        type === "youtube"
-                          ? "Enter YouTube URL (https://youtube.com/watch?v=...)"
-                          : "Enter webpage URL (https://example.com)"
-                      }
-                      value={urlInputs[type as "youtube" | "document"]}
-                      onChange={(e) =>
-                        handleUrlInput(e, type as "youtube" | "document")
-                      }
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        handleUrlSubmit(type as "youtube" | "document")
-                      }
-                      disabled={urlLoading[type]}
-                    >
-                      {urlLoading[type] ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : urlAdded[type] ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        "Add"
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                    {urlLoading.youtube ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : urlAdded.youtube ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      "Add YouTube"
+                    )}
+                  </Button>
+                </div>
 
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  ref={imageInputRef}
-                  accept="image/*"
-                  className="hidden"
-                  onChange={() => handleFileUpload("image", imageInputRef)}
-                />
-                {/* <Button
-                  className="w-full"
-                  onClick={() => imageInputRef.current?.click()}
-                >
-                  <FileUp className="mr-2 h-4 w-4" /> Upload Image
-                </Button> */}
-                <AnimatePresence>
-                  {uploadedFiles.map(
-                    (file) =>
-                      file.type === "image" && (
-                        <motion.div
-                          key={file.name}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                        >
-                          <FileUploadItem
-                            fileName={file.name}
-                            onDelete={() => removeFile(file.name)}
-                          />
-                        </motion.div>
-                      )
-                  )}
-                </AnimatePresence>
+                {/* Webpage URL Input */}
+                <div className="relative flex items-center space-x-2">
+                  <Input
+                    placeholder="Enter webpage URL (https://example.com)"
+                    value={urlInputs.document}
+                    onChange={(e) => handleUrlInput(e, "document")}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => handleUrlSubmit("document")}
+                    disabled={urlLoading.document}
+                  >
+                    {urlLoading.document ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : urlAdded.document ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      "Add Webpage"
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -365,7 +342,7 @@ const AIAssistant: React.FC = () => {
 
         <Card className="flex h-[600px] flex-col">
           <CardHeader>
-            <CardTitle>AI Chatbot</CardTitle>
+            <CardTitle>Paradox AI</CardTitle>
           </CardHeader>
           <CardContent className="flex-grow overflow-hidden">
             <ScrollArea className="h-full">
@@ -419,7 +396,6 @@ const AIAssistant: React.FC = () => {
           {/* <Button onClick={() => onOpen()}>Open Modal</Button> */}
         </Card>
       </div>
-      {/* <ModalVid /> */}
     </div>
   )
 }

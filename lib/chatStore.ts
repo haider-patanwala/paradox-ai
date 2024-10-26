@@ -18,10 +18,16 @@ export const useModal = create<ModalStore>((set, get) => ({
   onClose: () => set({ isOpen: false })
 }))
 
-interface ChatStore {
+interface ChatState {
+  setYoutubeContent(data: any): unknown
   messages: Message[]
-  suggestions: string[]
   isLoading: boolean
+  suggestions: string[]
+  context: {
+    pdf: string
+    youtube: string
+    url: string
+  }
   pdfContent: string | null
   urlContent: string | null
   setPdfContent: (content: string) => void
@@ -35,85 +41,70 @@ const genAI = new GoogleGenerativeAI(
 )
 const model = genAI.getGenerativeModel({ model: "gemini-pro" })
 
-export const useChatStore = create<ChatStore>((set, get) => ({
-  messages: [
-    { role: "assistant", content: "Hello! How can I assist you today?" }
-  ],
-  suggestions: ["@doc", "@yt", "@img", "@url"],
+export const useChatStore = create<ChatState>((set, get) => ({
+  messages: [],
   isLoading: false,
+  suggestions: ['@all', '@youtube', '@pdf', '@url'],
+  context: {
+    pdf: '',
+    youtube: '',
+    url: '',
+  },
   pdfContent: null,
   urlContent: null,
-  setPdfContent: (content) => set({ pdfContent: content }),
-  setUrlContent: (content) => set({ urlContent: content }),
+  setPdfContent: (content) =>
+    set((state) => ({
+      context: { ...state.context, pdf: content }
+    })),
+  setUrlContent: (content) =>
+    set((state) => ({
+      context: { ...state.context, url: content }
+    })),
+  setYoutubeContent: (content: any) =>
+    set((state) => ({
+      context: { ...state.context, youtube: content }
+    })),
   addMessage: (message) =>
     set((state) => ({
       messages: [...state.messages, message]
     })),
-  sendMessage: async (content: string) => {
-    set({ isLoading: true })
+  sendMessage: async (message: string) => {
+    set({ isLoading: true });
+    const state = get();
+    
+    let contextToUse = '';
+    if (message.includes('@all')) {
+      contextToUse = Object.values(state.context).filter(Boolean).join('\n\n');
+    } else if (message.includes('@youtube')) {
+      contextToUse = state.context.youtube;
+    } else if (message.includes('@pdf')) {
+      contextToUse = state.context.pdf;
+    } else if (message.includes('@url')) {
+      contextToUse = state.context.url;
+    }
+
     try {
-      if (content.includes("@url")) {
-        const urlContent = get().urlContent
-        if (urlContent) {
-          set((state) => ({
-            messages: [
-              ...state.messages,
-              {
-                role: "assistant",
-                content:
-                  "Your URL content has been successfully sent to the conversation. You can continue chatting!"
-              }
-            ]
-          }))
-        } else {
-          set((state) => ({
-            messages: [
-              ...state.messages,
-              {
-                role: "assistant",
-                content:
-                  "No URL content found. Please add a URL first using the input box."
-              }
-            ]
-          }))
-        }
-        set({ isLoading: false })
-        return
-      }
+      const prompt = contextToUse
+        ? `Context: ${contextToUse}\n\nUser: ${message}`
+        : message;
 
-      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-        set((state) => ({
-          messages: [
-            ...state.messages,
-            {
-              role: "assistant",
-              content:
-                "I apologize, but I can't process your request at the moment as the API key is not configured. Please contact the administrator."
-            }
-          ]
-        }))
-        return
-      }
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const aiMessage = response.text();
 
-      const result = await model.generateContent(content)
-      const response = await result.response
-      const text = response.text()
       set((state) => ({
-        messages: [...state.messages, { role: "assistant", content: text }]
-      }))
+        messages: [...state.messages, { role: 'assistant', content: aiMessage }],
+        isLoading: false,
+      }));
     } catch (error) {
+      console.error('Error generating response:', error);
       set((state) => ({
-        messages: [
-          ...state.messages,
-          {
-            role: "assistant",
-            content:
-              "I apologize, but I encountered an error processing your request. Please try again later."
-          }
-        ]
-      }))
-    } finally {
-      set({ isLoading: false })
+        messages: [...state.messages, { 
+          role: 'assistant', 
+          content: 'Sorry, I encountered an error while processing your request.' 
+        }],
+        isLoading: false,
+      }));
     }
   }
 }))
