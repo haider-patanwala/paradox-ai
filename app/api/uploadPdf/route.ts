@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import PDFParser from "pdf2json";
 import { NextRequest, NextResponse } from "next/server";
 
+
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const uploadedFiles = formData.getAll("file");
@@ -42,7 +43,11 @@ export async function POST(req: NextRequest) {
         });
 
         // Return the parsed text after it's ready
-        return NextResponse.json({ message: "success", data: parsedText }, { status: 200 });
+        return NextResponse.json({ 
+          message: "PDF uploaded and processed successfully!", 
+          data: parsedText,
+          success: true  // Add this flag for UI feedback
+        }, { status: 200 });
       } else {
         console.log("Uploaded file is not in the expected format.");
       }

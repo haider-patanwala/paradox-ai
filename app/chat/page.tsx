@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import { useState, useRef, useEffect } from "react"
@@ -15,6 +13,7 @@ import { ChatMessage } from "@/components/chat/ChatMessage"
 import { FileUploadItem } from "@/components/upload/FileUploadItem"
 import { isValidUrl } from "../utils/validation"
 import ModalVid from "@/components/modalVid"
+import { toast } from "react-hot-toast"
 
 const AIAssistant: React.FC = () => {
   const [input, setInput] = useState("")
@@ -23,7 +22,7 @@ const AIAssistant: React.FC = () => {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  const { messages, suggestions, isLoading, addMessage, sendMessage } = useChatStore()
+  const { messages, suggestions, isLoading, addMessage, sendMessage, setPdfContent } = useChatStore()
   const { uploadedFiles, validUrls, addFile, addUrl, removeFile, removeUrl } = useUploadStore()
 
   useEffect(() => {
@@ -32,10 +31,40 @@ const AIAssistant: React.FC = () => {
 
   const handleFileUpload = async (type: 'pdf' | 'image', inputRef: React.RefObject<HTMLInputElement>) => {
     const file = inputRef.current?.files?.[0]
-   const formData = new FormData();
-    formData.append("file", file!);
+    if (!file) return
 
-    try {
+    if (type === 'pdf') {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      try {
+        const response = await fetch("/api/uploadPdf", {
+          method: "POST",
+          body: formData,
+        })
+
+        const result = await response.json()
+        
+        if (result.success) {
+          setPdfContent(result.data)
+          toast.success(result.message)
+          addFile({
+              name: file.name,
+              type: 'pdf',
+              content: file
+          })
+        } else {
+          toast.error(result.message || 'Failed to upload PDF')
+        }
+      } catch (error) {
+        console.error("Failed to upload file:", error)
+        toast.error('Error uploading PDF')
+      }
+    } else if (type === 'image') {
+      const formData = new FormData();
+      formData.append("file", file!);
+
+      try {
         const response = await fetch("/api/uploadPdf", {
             method: "POST",
             body: formData,
@@ -47,11 +76,11 @@ const AIAssistant: React.FC = () => {
 
         const data = await response.json();
         console.log("the data is 3",data);
-    } catch (error) {
+      } catch (error) {
         console.error("Failed to upload file:", error);
+      }
     }
-}
-
+  }
 
   const handleUrlInput = async (e: React.ChangeEvent<HTMLInputElement>, type: 'youtube' | 'document') => {
     const url = e.target.value
