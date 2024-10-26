@@ -416,7 +416,7 @@ const AIAssistant: React.FC = () => {
               </Button>
             </div>
           </CardFooter>
-          <Button onClick={() => onOpen()}>Open Modal</Button>
+          {/* <Button onClick={() => onOpen()}>Open Modal</Button> */}
         </Card>
       </div>
       {/* <ModalVid /> */}
