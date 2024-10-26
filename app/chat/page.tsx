@@ -238,7 +238,7 @@ const AIAssistant: React.FC = () => {
 
   return (
     <div className="container relative mx-auto flex min-h-svh min-w-[80rem] flex-col items-center justify-center p-4 ">
-      <div className="my-auto grid w-full grid-cols-1 gap-4 invert md:grid-cols-2">
+      <div className="my-auto grid w-full grid-cols-1 gap-4 hue-rotate-180 invert md:grid-cols-2">
         <motion.div
           className="space-y-4"
           initial={{ opacity: 0, y: 20 }}
@@ -356,7 +356,7 @@ const AIAssistant: React.FC = () => {
           </Card>
           {source && (
             <Card>
-              <CardContent className="relative flex items-center justify-center p-5 invert">
+              <CardContent className="-hue-rotate-180 relative flex items-center justify-center p-5 invert">
                 <Player video_src={source} />
               </CardContent>
             </Card>
