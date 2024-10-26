@@ -12,8 +12,11 @@ export const POST = async (req: NextRequest) => {
     }
     const getVideoTranscript = async (videoId: string) => {
       try {
+        console.log("videoId", videoId)
         const transcript = await YoutubeTranscript.fetchTranscript(videoId)
+        console.log("the transcript", transcript)
         if (isTimeRequired) {
+          console.log("the trans", transcript)
           return transcript
         }
         let content = ""
