@@ -18,8 +18,9 @@ import { useChatStore, useModal } from "../../lib/chatStore"
 import { ChatMessage } from "@/components/chat/ChatMessage"
 import { FileUploadItem } from "@/components/upload/FileUploadItem"
 import { isValidUrl } from "../utils/validation"
-import ModalVid from "@/components/modalVid"
 import { toast } from "react-hot-toast"
+import Player from "@/components/vid-layouts/player"
+import { Video } from "@/lib/store"
 
 const AIAssistant: React.FC = () => {
   const [input, setInput] = useState("")
@@ -123,6 +124,7 @@ const AIAssistant: React.FC = () => {
       toast.error("Please enter a valid URL")
       return
     }
+    setSource(url)
 
     setUrlLoading(true)
     try {
@@ -187,9 +189,9 @@ const AIAssistant: React.FC = () => {
     }
   }
 
-  async function handleSubmit() {}
 
   const { onOpen } = useModal()
+  const { setSource,source } = Video()
 
   return (
     <div className="container mx-auto p-4">
@@ -309,6 +311,11 @@ const AIAssistant: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+          {source && <Card>
+            <CardContent className="relative flex items-center justify-center p-5">
+              <Player video_src={source} />
+            </CardContent>
+          </Card>}
         </motion.div>
 
         <Card className="flex h-[600px] flex-col">
@@ -367,7 +374,7 @@ const AIAssistant: React.FC = () => {
           <Button onClick={() => onOpen()}>Open Modal</Button>
         </Card>
       </div>
-      <ModalVid />
+      {/* <ModalVid /> */}
     </div>
   )
 }

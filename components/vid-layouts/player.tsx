@@ -7,7 +7,7 @@ import {
   MediaProvider,
   type MediaProviderAdapter,
   PlayButton,
-  isYouTubeProvider,
+  isYouTubeProvider
 } from "@vidstack/react"
 
 import { Video } from "@/lib/store"
@@ -39,6 +39,20 @@ const Player: React.FC<playerProps> = ({ video_src }) => {
       player.current.pause()
     }
   }, [ongoing, canPlay])
+  function extractTimestamp(url: string) {
+    const urlObj = new URL(url)
+    const params = new URLSearchParams(urlObj.search)
+
+    const timestamp = params.get("t")
+
+    if (timestamp !== null) {
+      return parseInt(timestamp, 10)
+    }
+
+    return 
+  }
+
+  const time =video_src ? extractTimestamp(video_src) : 0
 
   return (
     <MediaPlayer
@@ -49,6 +63,7 @@ const Player: React.FC<playerProps> = ({ video_src }) => {
       crossOrigin
       onProviderChange={onProviderChange}
       ref={player}
+      currentTime={time}
       onCanPlay={() => {
         setStarted(false), setCanPlay(true)
       }}
