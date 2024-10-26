@@ -1,38 +1,41 @@
 import { create } from 'zustand'
 
 interface UploadedFile {
-  type: 'pdf' | 'image'
   name: string
+  type: 'pdf' | 'image'
   content: File
 }
 
-interface ValidUrl {
-  type: 'youtube' | 'document'
+interface UrlData {
   url: string
+  type: 'youtube' | 'document'
+  content: any
 }
 
 interface UploadStore {
-  uploadedFiles: UploadedFile[]
-  validUrls: ValidUrl[]
-  addFile: (file: UploadedFile) => void
-  addUrl: (url: ValidUrl) => void
-  removeFile: (name: string) => void
+  uploadedFiles: Array<{
+    name: string
+    type: 'pdf' | 'image'
+    content: File
+  }>
+  addFile: (file: { name: string; type: 'pdf' | 'image'; content: File }) => void
+  removeFile: (fileName: string) => void
+  addUrl: (url: { url: string; type: 'youtube' | 'document'; content: any }) => void
   removeUrl: (url: string) => void
 }
 
 export const useUploadStore = create<UploadStore>((set) => ({
   uploadedFiles: [],
-  validUrls: [],
   addFile: (file) => set((state) => ({
     uploadedFiles: [...state.uploadedFiles, file]
   })),
-  addUrl: (url) => set((state) => ({
-    validUrls: [...state.validUrls, url]
+  removeFile: (fileName) => set((state) => ({
+    uploadedFiles: state.uploadedFiles.filter((file) => file.name !== fileName)
   })),
-  removeFile: (name) => set((state) => ({
-    uploadedFiles: state.uploadedFiles.filter(file => file.name !== name)
+  addUrl: (url) => set((state) => ({
+    // Add URL handling logic here
   })),
   removeUrl: (url) => set((state) => ({
-    validUrls: state.validUrls.filter(item => item.url !== url)
+    // Add URL removal logic here
   }))
 }))
