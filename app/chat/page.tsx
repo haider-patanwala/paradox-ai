@@ -32,15 +32,39 @@ const AIAssistant: React.FC = () => {
 
   const handleFileUpload = async (type: 'pdf' | 'image', inputRef: React.RefObject<HTMLInputElement>) => {
     const file = inputRef.current?.files?.[0]
-    if (file) {
-      addFile({ type, name: file.name, content: file })
-    }
-  }
+   const formData = new FormData();
+    formData.append("file", file!);
 
-  const handleUrlInput = (e: React.ChangeEvent<HTMLInputElement>, type: 'youtube' | 'document') => {
+    try {
+        const response = await fetch("/api/uploadPdf", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("the data is 3",data);
+    } catch (error) {
+        console.error("Failed to upload file:", error);
+    }
+}
+
+
+  const handleUrlInput = async (e: React.ChangeEvent<HTMLInputElement>, type: 'youtube' | 'document') => {
     const url = e.target.value
     if (isValidUrl(url)) {
-      addUrl({ type, url })
+       const response = await fetch("/api/youtube",{
+        method: "POST",
+        body: JSON.stringify({
+            videoId: url,
+            isTimeRequired: true
+        })
+    })
+    const data = await response.json()
+    console.log(data)
     }
   }
 
@@ -68,6 +92,10 @@ const AIAssistant: React.FC = () => {
         addMessage({ role: "assistant", content: "Error: No API key provided. Please check your configuration." })
       }
     }
+  }
+
+  async function handleSubmit (){
+
   }
 
   const { onOpen } = useModal()
