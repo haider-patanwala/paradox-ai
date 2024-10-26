@@ -1,60 +1,61 @@
-import { NextRequest, NextResponse } from "next/server"
-import { promises as fs } from "fs"
-import { v4 as uuidv4 } from "uuid"
-import PDFParser from "pdf2json"
+import { v4 as uuidv4 } from "uuid";
+import fs from "fs/promises";
+import PDFParser from "pdf2json";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest, res: NextResponse) {
-  const formData: FormData = await req.formData()
-  const uploadedFiles = formData.getAll("filepond")
-  let fileName = ""
-  let parsedText = ""
+
+export async function POST(req: NextRequest) {
+  const formData = await req.formData();
+  const uploadedFiles = formData.getAll("file");
+  let fileName = "";
+
+  console.log("uploadedFiles:", uploadedFiles);
 
   if (uploadedFiles && uploadedFiles.length > 0) {
-    const uploadedFile = uploadedFiles[1]
-    console.log("Uploaded file:", uploadedFile)
+    for (const uploadedFile of uploadedFiles) {
+      if (uploadedFile instanceof File) {
+        console.log("Uploaded file:", uploadedFile);
 
-    // Check if uploadedFile is of type File
-    if (uploadedFile instanceof File) {
-      // Generate a unique filename
-      fileName = uuidv4()
+        // Generate a unique filename
+        fileName = uuidv4();
+        const tempFilePath = `/tmp/${fileName}.pdf`;
 
-      // Convert the uploaded file into a temporary file
-      const tempFilePath = `/tmp/${fileName}.pdf`
+        // Convert ArrayBuffer to Buffer
+        const fileBuffer = Buffer.from(await uploadedFile.arrayBuffer());
+        await fs.writeFile(tempFilePath, fileBuffer);
 
-      // Convert ArrayBuffer to Buffer
-      const fileBuffer = Buffer.from(await uploadedFile.arrayBuffer())
+        // Parse the PDF using pdf2json, wrapped in a promise
+        const parsedText = await new Promise<string>((resolve, reject) => {
+          const pdfParser = new (PDFParser as any)(null, 1);
 
-      // Save the buffer as a file
-      await fs.writeFile(tempFilePath, fileBuffer)
+          pdfParser.on("pdfParser_dataError", (errData: any) => {
+            console.log(errData.parserError);
+            reject(errData.parserError);
+          });
 
-      // Parse the pdf using pdf2json. See pdf2json docs for more info.
+          pdfParser.on("pdfParser_dataReady", () => {
+            const text = (pdfParser as any).getRawTextContent();
+            console.log("the parsed text is:", text);
+            resolve(text);
+          });
 
-      // The reason I am bypassing type checks is because
-      // the default type definitions for pdf2json in the npm install
-      // do not allow for any constructor arguments.
-      // You can either modify the type definitions or bypass the type checks.
-      // I chose to bypass the type checks.
-      const pdfParser = new (PDFParser as any)(null, 1)
+          pdfParser.loadPDF(tempFilePath);
+        });
 
-      // See pdf2json docs for more info on how the below works.
-      pdfParser.on("pdfParser_dataError", (errData: any) =>
-        console.log(errData.parserError)
-      )
-
-      pdfParser.on("pdfParser_dataReady", () => {
-        console.log((pdfParser as any).getRawTextContent())
-        parsedText = (pdfParser as any).getRawTextContent()
-      })
-
-      pdfParser.loadPDF(tempFilePath)
-    } else {
-      console.log("Uploaded file is not in the expected format.")
+        // Return the parsed text after it's ready
+        return NextResponse.json({ 
+          message: "PDF uploaded and processed successfully!", 
+          data: parsedText,
+          success: true  // Add this flag for UI feedback
+        }, { status: 200 });
+      } else {
+        console.log("Uploaded file is not in the expected format.");
+      }
     }
   } else {
-    console.log("No files found.")
+    console.log("No files found.");
+    return NextResponse.json({ message: "No files found." }, { status: 400 });
   }
 
-  const response = new NextResponse(parsedText)
-  response.headers.set("FileName", fileName)
-  return response
+  return NextResponse.json({ message: "No valid file processed." }, { status: 400 });
 }

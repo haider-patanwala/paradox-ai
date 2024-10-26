@@ -23,6 +23,8 @@ interface ChatStore {
   messages: Message[]
   suggestions: string[]
   isLoading: boolean
+  pdfContent: string | null
+  setPdfContent: (content: string) => void
   addMessage: (message: Message) => void
   sendMessage: (content: string) => Promise<void>
 }
@@ -34,21 +36,44 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [{ role: "assistant", content: "Hello! How can I assist you today?" }],
   suggestions: ['@doc', '@yt', '@img', '@url'],
   isLoading: false,
+  pdfContent: null,
+  setPdfContent: (content) => set({ pdfContent: content }),
   addMessage: (message) => set((state) => ({ 
-    messages: [...state.messages, message] 
+    messages: [...state.messages, message]
   })),
   sendMessage: async (content: string) => {
     set({ isLoading: true })
     try {
-      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-        setTimeout(() => {
+      if (content.includes('@doc')) {
+        const pdfContent = get().pdfContent
+        if (pdfContent) {
+          // Don't show the PDF content, just show a confirmation message
           set((state) => ({
             messages: [...state.messages, { 
               role: 'assistant', 
-              content: "I apologize, but I can't process your request at the moment as the API key is not configured. Please contact the administrator." 
+              content: "Your PDF content has been successfully sent to the conversation. You can continue chatting!"
             }]
           }))
-        }, 1000) // Simulate API delay
+          // The pdfContent is still available in the store via get().pdfContent
+        } else {
+          set((state) => ({
+            messages: [...state.messages, { 
+              role: 'assistant', 
+              content: "No PDF content found. Please upload a PDF first using the upload button." 
+            }]
+          }))
+        }
+        set({ isLoading: false })
+        return
+      }
+      
+      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        set((state) => ({
+          messages: [...state.messages, { 
+            role: 'assistant', 
+            content: "I apologize, but I can't process your request at the moment as the API key is not configured. Please contact the administrator." 
+          }]
+        }))
         return
       }
       
