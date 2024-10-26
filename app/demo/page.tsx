@@ -21,7 +21,7 @@ export default function FileUpload() {
   //     {
   //       method: "POST",
   //       headers: {
-  //         Authorization: `Bearer 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`,
+  //         Authorization: `Bearer process.env.OPENROUTER_API_KEY`,
   //         "Content-Type": "application/json",
   //       },
   //       body: JSON.stringify({
