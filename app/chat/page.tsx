@@ -21,8 +21,14 @@ const AIAssistant: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
-  const [urlLoading, setUrlLoading] = useState(false)
-  const [urlAdded, setUrlAdded] = useState(false)
+  const [urlLoading, setUrlLoading] = useState<{ [key: string]: boolean }>({
+    youtube: false,
+    document: false
+  })
+  const [urlAdded, setUrlAdded] = useState<{ [key: string]: boolean }>({
+    youtube: false,
+    document: false
+  })
   const { setUrlContent } = useChatStore()
 
   const { messages, suggestions, isLoading, addMessage, sendMessage, setPdfContent } = useChatStore()
@@ -32,6 +38,12 @@ const AIAssistant: React.FC = () => {
     youtube: '',
     document: ''
   })
+
+  const extractYoutubeId = (url: string): string | null => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+    const match = url.match(regExp)
+    return (match && match[2].length === 11) ? match[2] : null
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -104,9 +116,39 @@ const AIAssistant: React.FC = () => {
       return
     }
 
-    setUrlLoading(true)
+    setUrlLoading(prev => ({ ...prev, [type]: true }))
+    
     try {
-      if (type === 'document') {
+      if (type === 'youtube') {
+        const videoId = extractYoutubeId(url)
+        if (!videoId) {
+          toast.error('Invalid YouTube URL')
+          return
+        }
+
+        const response = await fetch("/api/youtube", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ videoId })
+        })
+
+        const result = await response.json()
+        
+        if (result.success) {
+          setUrlContent(result.data)
+          toast.success("YouTube transcript extracted successfully!")
+          setUrlAdded(prev => ({ ...prev, [type]: true }))
+          addUrl({
+            url,
+            type: 'youtube',
+            content: result.data
+          })
+        } else {
+          toast.error(result.message || 'Failed to extract YouTube transcript')
+        }
+      } else if (type === 'document') {
         const response = await fetch("/api/linkExtract", {
           method: "POST",
           headers: {
@@ -120,7 +162,7 @@ const AIAssistant: React.FC = () => {
         if (result.data) {
           setUrlContent(JSON.stringify(result.data))
           toast.success("URL content extracted successfully!")
-          setUrlAdded(true)
+          setUrlAdded(prev => ({ ...prev, [type]: true }))
           addUrl({
             url,
             type: 'document',
@@ -129,9 +171,10 @@ const AIAssistant: React.FC = () => {
         }
       }
     } catch (error) {
-      toast.error('Error extracting URL content')
+      console.error(`Error processing ${type} URL:`, error)
+      toast.error(`Error processing ${type} content`)
     } finally {
-      setUrlLoading(false)
+      setUrlLoading(prev => ({ ...prev, [type]: false }))
     }
   }
 
@@ -212,18 +255,22 @@ const AIAssistant: React.FC = () => {
                 {['youtube', 'document'].map((type) => (
                   <div key={type} className="relative flex items-center space-x-2">
                     <Input 
-                      placeholder={type === 'document' ? "Enter URL (e.g., https://example.com)" : "YouTube URL"}
+                      placeholder={
+                        type === 'youtube' 
+                          ? "Enter YouTube URL (https://youtube.com/watch?v=...)" 
+                          : "Enter webpage URL (https://example.com)"
+                      }
                       value={urlInputs[type as 'youtube' | 'document']}
                       onChange={(e) => handleUrlInput(e, type as 'youtube' | 'document')}
                     />
                     <Button 
                       size="sm"
                       onClick={() => handleUrlSubmit(type as 'youtube' | 'document')}
-                      disabled={urlLoading}
+                      disabled={urlLoading[type]}
                     >
-                      {urlLoading ? (
+                      {urlLoading[type] ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : urlAdded ? (
+                      ) : urlAdded[type] ? (
                         <Check className="h-4 w-4 text-green-500" />
                       ) : (
                         'Add'

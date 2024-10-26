@@ -36,7 +36,7 @@ const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [{ role: "assistant", content: "Hello! How can I assist you today?" }],
-  suggestions: ['@doc', '@yt', '@img', '@url'],
+  suggestions: ['@pdf', '@yt', '@img', '@url', '@all'],
   isLoading: false,
   pdfContent: null,
   urlContent: null,
@@ -48,27 +48,27 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sendMessage: async (content: string) => {
     set({ isLoading: true })
     try {
-      if (content.includes('@url')) {
-        const urlContent = get().urlContent
-        if (urlContent) {
-          set((state) => ({
-            messages: [...state.messages, {
-              role: 'assistant', 
-              content: "Your URL content has been successfully sent to the conversation. You can continue chatting!"
-            }]
-          }))
-        } else {
-          set((state) => ({
-            messages: [...state.messages, { 
-              role: 'assistant', 
-              content: "No URL content found. Please add a URL first using the input box." 
-            }]
-          }))
+      const pdfContent = get().pdfContent
+      const urlContent = get().urlContent
+      let promptContent = content
+
+      // Handle @all command
+      if (content.includes('@all')) {
+        let allContent = ''
+        if (pdfContent) allContent += `PDF Content: ${pdfContent}\n`
+        if (urlContent) allContent += `URL Content: ${urlContent}\n`
+        
+        promptContent = `User Query: ${content}\n${allContent}Please analyze all this content and respond accordingly.`
+      } else {
+        // Handle individual commands
+        if (content.includes('@pdf') && pdfContent) {
+          promptContent += `\nPDF Content: ${pdfContent}`
         }
-        set({ isLoading: false })
-        return
+        if (content.includes('@url') && urlContent) {
+          promptContent += `\nURL Content: ${urlContent}`
+        }
       }
-      
+
       if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
         set((state) => ({
           messages: [...state.messages, { 
@@ -79,9 +79,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return
       }
       
-      const result = await model.generateContent(content)
+      // Send the enhanced prompt to Gemini
+      const result = await model.generateContent(promptContent)
       const response = await result.response
       const text = response.text()
+      
       set((state) => ({
         messages: [...state.messages, { role: 'assistant', content: text }]
       }))
