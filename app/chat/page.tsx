@@ -45,7 +45,7 @@ const AIAssistant: React.FC = () => {
     isLoading,
     addMessage,
     sendMessage,
-    setPdfContent  } = useChatStore()
+    setPdfContent,setYoutubeContent  } = useChatStore()
   const { uploadedFiles, addFile, addUrl, removeFile, removeUrl } =
     useUploadStore()
 
@@ -55,13 +55,15 @@ const AIAssistant: React.FC = () => {
   })
 
   const extractYoutubeId = (url: string): string | null => {
-    const result = url.split("watch?v=")[1]
+    const result = url.split("=")[1]
     return result ? result : null
   }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+
 
   const handleFileUpload = async (
     type: "pdf" | "image",
@@ -129,7 +131,9 @@ const AIAssistant: React.FC = () => {
     }))
   }
 
-  const handleUrlSubmit = async (type: "youtube" | "document") => {
+ const handleUrlSubmit = async (type: "youtube" | "document") => {
+    console.log("the type is ====------>>>>>>>>>>>>>>>>>.", type)
+    console.log("I am inside the function.......")
     const url = urlInputs[type]
     if (!isValidUrl(url)) {
       toast.error("Please enter a valid URL")
@@ -141,6 +145,7 @@ const AIAssistant: React.FC = () => {
 
     try {
       if (type === "youtube") {
+        console.log("I am inside the youtube function.......")
         const videoId = extractYoutubeId(url)
         console.log("the videoId is ====------>>>>>>>>>>>>>>>>>.", videoId)
         if (!videoId) {
@@ -153,46 +158,31 @@ const AIAssistant: React.FC = () => {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ 
-            videoId,
-            isTimeRequired: true  // Add this flag
-          })
+          body: JSON.stringify({ videoId, isTimeRequired: false })
         })
 
-        const result = await response.json()
+        const data = await response.json()
 
-        if (result.success) {
-          useChatStore.getState().setYoutubeContent(result.data)
+        console.log("the response is ====------>>>>>>>>>>>>>>>>>.", data)
+        // if (!response.ok) throw new Error("Failed to fetch YouTube transcript")
+
+        // const result = await response.json()
+        // console.log("the result is ====------>>>>>>>>>>>>>>>>>.", result)
+        if(data.success){
+            console.log("the in if block")
+        }else{
+            console.log("the  is in else block")
+        }
+
+
+        if (data.success) {
+            setYoutubeContent(data.data)
+        //   setYoutubeContent(result.data)
           toast.success("YouTube transcript extracted successfully!")
           setUrlAdded((prev) => ({ ...prev, [type]: true }))
-          addUrl({
-            url,
-            type: "youtube",
-            content: result.data
-          })
+          addUrl({ url, type: "youtube", content: data.data })
         } else {
-          toast.error(result.message || "Failed to extract YouTube transcript")
-        }
-      } else if (type === "document") {
-        const response = await fetch("/api/linkExtract", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ query: url })
-        })
-
-        const result = await response.json()
-
-        if (result.data) {
-          setUrlContent(JSON.stringify(result.data))
-          toast.success("URL content extracted successfully!")
-          setUrlAdded((prev) => ({ ...prev, [type]: true }))
-          addUrl({
-            url,
-            type: "document",
-            content: result.data
-          })
+          toast.error(data.message || "Failed to extract YouTube transcript")
         }
       }
     } catch (error) {

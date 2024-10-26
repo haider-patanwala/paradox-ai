@@ -1,6 +1,9 @@
 import { create } from "zustand"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
+const genAI = new GoogleGenerativeAI("AIzaSyA9D602g84K7muJue4n62nAQq-3fZ2QhUY")
+const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+
 interface Message {
   role: "user" | "assistant"
   content: string
@@ -17,9 +20,8 @@ export const useModal = create<ModalStore>((set, get) => ({
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false })
 }))
-
 interface ChatState {
-  setYoutubeContent(data: any): unknown
+  setYoutubeContent: (content: string) => void // Ensure proper type for `content`
   messages: Message[]
   isLoading: boolean
   suggestions: string[]
@@ -35,11 +37,6 @@ interface ChatState {
   addMessage: (message: Message) => void
   sendMessage: (content: string) => Promise<void>
 }
-
-const genAI = new GoogleGenerativeAI(
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""
-)
-const model = genAI.getGenerativeModel({ model: "gemini-pro" })
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
@@ -60,7 +57,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => ({
       context: { ...state.context, url: content }
     })),
-  setYoutubeContent: (content: any) =>
+  setYoutubeContent: (content) =>
     set((state) => ({
       context: { ...state.context, youtube: content }
     })),
@@ -82,20 +79,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } else if (message.includes('@url')) {
       contextToUse = state.context.url;
     }
-
+    console.log("the contextToUse is ====------>>>>>>>>>>>>>>>>>.", contextToUse)
     try {
       const prompt = contextToUse
         ? `Context: ${contextToUse}\n\nUser: ${message}`
         : message;
 
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const aiMessage = response.text();
+      const aiMessage = result.response?.text();
 
-      set((state) => ({
-        messages: [...state.messages, { role: 'assistant', content: aiMessage }],
-        isLoading: false,
-      }));
+      if (aiMessage) {
+        set((state) => ({
+          messages: [...state.messages, { role: 'assistant', content: aiMessage }],
+          isLoading: false,
+        }));
+      }
     } catch (error) {
       console.error('Error generating response:', error);
       set((state) => ({

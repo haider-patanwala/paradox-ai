@@ -3,6 +3,8 @@ import { YoutubeTranscript } from "youtube-transcript"
 
 export const POST = async (req: NextRequest) => {
   try {
+
+    console.log("I am inside the youtube route.......")
     const { videoId, isTimeRequired } = await req.json()
 
     if (!videoId) {
