@@ -37,8 +37,7 @@ const AIAssistant: React.FC = () => {
     document: false
   })
   const { setUrlContent } = useChatStore()
-  const { setSource,source } = Video()
-
+  const { setSource, source } = Video()
 
   const {
     messages,
@@ -57,9 +56,10 @@ const AIAssistant: React.FC = () => {
   })
 
   const extractYoutubeId = (url: string): string | null => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
     const match = url.match(regExp)
-    return (match && match[2].length === 11) ? match[2] : null
+    return match && match[2].length === 11 ? match[2] : null
   }
 
   useEffect(() => {
@@ -138,43 +138,41 @@ const AIAssistant: React.FC = () => {
       toast.error("Please enter a valid URL")
       return
     }
-setSource(url)
+    setSource(url)
 
-    setUrlLoading(prev => ({ ...prev, [type]: true }))
+    setUrlLoading((prev) => ({ ...prev, [type]: true }))
 
     try {
-      if (type === 'youtube') {
+      if (type === "youtube") {
         const videoId = extractYoutubeId(url)
         if (!videoId) {
-          toast.error('Invalid YouTube URL')
+          toast.error("Invalid YouTube URL")
           return
         }
-
-
 
         const response = await fetch("/api/youtube", {
           method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ videoId })
         })
 
         const result = await response.json()
-        
+
         if (result.success) {
           setUrlContent(result.data)
           toast.success("YouTube transcript extracted successfully!")
-          setUrlAdded(prev => ({ ...prev, [type]: true }))
+          setUrlAdded((prev) => ({ ...prev, [type]: true }))
           addUrl({
             url,
-            type: 'youtube',
+            type: "youtube",
             content: result.data
           })
         } else {
-          toast.error(result.message || 'Failed to extract YouTube transcript')
+          toast.error(result.message || "Failed to extract YouTube transcript")
         }
-      } else if (type === 'document') {
+      } else if (type === "document") {
         const response = await fetch("/api/linkExtract", {
           method: "POST",
           headers: {
@@ -188,7 +186,7 @@ setSource(url)
         if (result.data) {
           setUrlContent(JSON.stringify(result.data))
           toast.success("URL content extracted successfully!")
-          setUrlAdded(prev => ({ ...prev, [type]: true }))
+          setUrlAdded((prev) => ({ ...prev, [type]: true }))
           addUrl({
             url,
             type: "document",
@@ -200,7 +198,7 @@ setSource(url)
       console.error(`Error processing ${type} URL:`, error)
       toast.error(`Error processing ${type} content`)
     } finally {
-      setUrlLoading(prev => ({ ...prev, [type]: false }))
+      setUrlLoading((prev) => ({ ...prev, [type]: false }))
     }
   }
 
@@ -236,12 +234,11 @@ setSource(url)
     }
   }
 
-
   const { onOpen } = useModal()
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="container relative mx-auto flex min-h-svh min-w-[80rem] flex-col items-center justify-center p-4 ">
+      <div className="my-auto grid w-full grid-cols-1 gap-4 invert md:grid-cols-2">
         <motion.div
           className="space-y-4"
           initial={{ opacity: 0, y: 20 }}
@@ -287,20 +284,27 @@ setSource(url)
               </div>
 
               <div className="space-y-2">
-                {['youtube', 'document'].map((type) => (
-                  <div key={type} className="relative flex items-center space-x-2">
-                    <Input 
+                {["youtube", "document"].map((type) => (
+                  <div
+                    key={type}
+                    className="relative flex items-center space-x-2"
+                  >
+                    <Input
                       placeholder={
-                        type === 'youtube' 
-                          ? "Enter YouTube URL (https://youtube.com/watch?v=...)" 
+                        type === "youtube"
+                          ? "Enter YouTube URL (https://youtube.com/watch?v=...)"
                           : "Enter webpage URL (https://example.com)"
                       }
-                      value={urlInputs[type as 'youtube' | 'document']}
-                      onChange={(e) => handleUrlInput(e, type as 'youtube' | 'document')}
+                      value={urlInputs[type as "youtube" | "document"]}
+                      onChange={(e) =>
+                        handleUrlInput(e, type as "youtube" | "document")
+                      }
                     />
                     <Button
                       size="sm"
-                      onClick={() => handleUrlSubmit(type as 'youtube' | 'document')}
+                      onClick={() =>
+                        handleUrlSubmit(type as "youtube" | "document")
+                      }
                       disabled={urlLoading[type]}
                     >
                       {urlLoading[type] ? (
@@ -323,12 +327,12 @@ setSource(url)
                   className="hidden"
                   onChange={() => handleFileUpload("image", imageInputRef)}
                 />
-                <Button
+                {/* <Button
                   className="w-full"
                   onClick={() => imageInputRef.current?.click()}
                 >
                   <FileUp className="mr-2 h-4 w-4" /> Upload Image
-                </Button>
+                </Button> */}
                 <AnimatePresence>
                   {uploadedFiles.map(
                     (file) =>
@@ -350,11 +354,13 @@ setSource(url)
               </div>
             </CardContent>
           </Card>
-          {source && <Card>
-            <CardContent className="relative flex items-center justify-center p-5">
-              <Player video_src={source} />
-            </CardContent>
-          </Card>}
+          {source && (
+            <Card>
+              <CardContent className="relative flex items-center justify-center p-5 invert">
+                <Player video_src={source} />
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
 
         <Card className="flex h-[600px] flex-col">

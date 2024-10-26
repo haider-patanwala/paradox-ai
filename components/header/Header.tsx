@@ -23,19 +23,20 @@ const Header: React.FC<HeaderProps> = () => {
           className={`${
             pathname === "/medical-report" ? "" : "text-secondaryGrey"
           } transition-all duration-300 ease-in-out hover:scale-105 hover:text-white hover:underline`}
-          href={"/medical-report"}
+          href={"/chat"}
         >
-          Report Analyzer
+          Chat
         </Link>
-
         <Link
           className={`${
-            pathname === "/chat" ? "" : "text-secondaryGrey"
+            pathname === "/medical-report" ? "" : "text-secondaryGrey"
           } transition-all duration-300 ease-in-out hover:scale-105 hover:text-white hover:underline`}
-          href={"/medicine-analyzer"}
+          href={"https://github.com/haider-patanwala/paradox-ai.git"}
+          target="_blank"
         >
-          Medicine Analyzer
+          GitHub
         </Link>
+
       </Menubar>
     </div>
   )
