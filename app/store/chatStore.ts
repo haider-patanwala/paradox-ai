@@ -24,7 +24,9 @@ interface ChatStore {
   suggestions: string[]
   isLoading: boolean
   pdfContent: string | null
+  urlContent: string | null
   setPdfContent: (content: string) => void
+  setUrlContent: (content: string) => void
   addMessage: (message: Message) => void
   sendMessage: (content: string) => Promise<void>
 }
@@ -37,29 +39,29 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   suggestions: ['@doc', '@yt', '@img', '@url'],
   isLoading: false,
   pdfContent: null,
+  urlContent: null,
   setPdfContent: (content) => set({ pdfContent: content }),
+  setUrlContent: (content) => set({ urlContent: content }),
   addMessage: (message) => set((state) => ({ 
     messages: [...state.messages, message]
   })),
   sendMessage: async (content: string) => {
     set({ isLoading: true })
     try {
-      if (content.includes('@doc')) {
-        const pdfContent = get().pdfContent
-        if (pdfContent) {
-          // Don't show the PDF content, just show a confirmation message
+      if (content.includes('@url')) {
+        const urlContent = get().urlContent
+        if (urlContent) {
           set((state) => ({
-            messages: [...state.messages, { 
+            messages: [...state.messages, {
               role: 'assistant', 
-              content: "Your PDF content has been successfully sent to the conversation. You can continue chatting!"
+              content: "Your URL content has been successfully sent to the conversation. You can continue chatting!"
             }]
           }))
-          // The pdfContent is still available in the store via get().pdfContent
         } else {
           set((state) => ({
             messages: [...state.messages, { 
               role: 'assistant', 
-              content: "No PDF content found. Please upload a PDF first using the upload button." 
+              content: "No URL content found. Please add a URL first using the input box." 
             }]
           }))
         }

@@ -82,21 +82,29 @@ export async function POST(req: NextRequest, res: NextResponse) {
 
     if (!query) {
       return NextResponse.json(
-        { message: "query is required" },
+        { message: "query is required", success: false },
         { status: 400 }
       )
     }
 
     const data = await getLink(query)
-    console.log("data", data)
-
+    
     return NextResponse.json(
-      { message: "Link got successfully", data },
+      { 
+        message: "Content extracted successfully", 
+        data,
+        success: true 
+      },
       { status: 200 }
     )
   } catch (error) {
+    console.error("Error extracting content:", error)
     return NextResponse.json(
-      { message: "Error fetching article", error },
+      { 
+        message: "Error extracting content", 
+        error,
+        success: false 
+      },
       { status: 500 }
     )
   }
